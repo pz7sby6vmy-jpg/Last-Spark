@@ -5,15 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Last Spark</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Russo+One&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Russo+One&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
 :root{--ember:#ff6a1a;--ember2:#ffb347;--ice:#39d0ff;--panel:rgba(12,14,20,.84);--line:rgba(255,255,255,.10);--txt:#eef0f4;--mut:#98a2b3;--ok:#3ddc84}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -393,8 +385,10 @@ body.touch #minimap{width:110px;height:110px}
 <div id="diag" style="position:fixed;left:8px;bottom:8px;max-width:80vw;background:rgba(150,20,20,.95);color:#fff;font:12px/1.4 monospace;padding:10px;border-radius:8px;z-index:50;display:none;white-space:pre-wrap;pointer-events:auto" onclick="this.style.display='none'"></div>
 <div id="err"><div><div class="logo" style="font-size:40px">LAST SPARK</div><p class="note" id="errMsg">This game needs WebGL. Try a recent version of Chrome, Safari, Edge or Firefox.</p></div></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 'use strict';
+if(!window.THREE){document.getElementById('err').style.display='flex';document.getElementById('errMsg').textContent='The 3D engine could not load (from cdnjs.cloudflare.com). Check your internet connection, turn off any ad or script blocker for this page, then reload.';throw new Error('3D engine missing');}
 /* ================= helpers ================= */
 const $=s=>document.querySelector(s);
 const $$=s=>Array.from(document.querySelectorAll(s));
@@ -564,7 +558,7 @@ function initThree(){
   Mat.beam=new THREE.MeshBasicMaterial({map:null,color:0xfff0d0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-3});
   Mat.flame=new THREE.MeshBasicMaterial({color:0x5fd0ff,transparent:true,opacity:0.85,blending:THREE.AdditiveBlending,depthWrite:false});
   clock=new THREE.Clock();
-  initPost();
+  initPost();loadPostFX(()=>{if(GFX.hi&&!GFX.composer)initPost();});
   buildShowroom();
   addEventListener('resize',onResize);onResize();
   renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();diag('Graphics were reset by your device. Reload the page to continue.');});
@@ -2622,6 +2616,10 @@ function initPost(){
     Object.assign(GFX,{composer:c,rp,bloom,fin});
   }catch(e){GFX.composer=null;}
 }
+// bloom helpers load in the background so a slow or blocked CDN never holds up the page
+function loadPostFX(cb){if(THREE.EffectComposer&&THREE.UnrealBloomPass)return cb();const base='https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/';
+  const L=['shaders/CopyShader.js','shaders/LuminosityHighPassShader.js','postprocessing/EffectComposer.js','postprocessing/RenderPass.js','postprocessing/ShaderPass.js','postprocessing/UnrealBloomPass.js'];let i=0;
+  const next=()=>{if(i>=L.length)return cb();const sc=document.createElement('script');sc.src=base+L[i++];sc.async=false;sc.onload=next;sc.onerror=()=>{};document.head.appendChild(sc);};try{next();}catch(e){}}
 function renderFrame(dt){
   if(GFX.composer){try{GFX.rp.scene=T.scene;GFX.rp.camera=camera;GFX.fin.uniforms.uTime.value=(GFX.fin.uniforms.uTime.value+dt)%100;GFX.composer.render(dt);return;}catch(e){GFX.composer=null;}}
   renderer.setRenderTarget(null);renderer.render(T.scene,camera);}
